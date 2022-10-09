@@ -46,7 +46,7 @@ jobs:
           target/            
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Install Cargo SQLX
-      run: cargo install sqlx-cli
+      run: cargo install sqlx-cli || true
     - name: Build Admin admin-ui
       run: npm --prefix=./admin-ui ci && npm --prefix=./admin-ui run build
     - name: Build
