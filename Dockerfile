@@ -23,6 +23,6 @@ EXPOSE 3000
 # RUN apk --no-cache add ca-certificates
 COPY settings settings/
 COPY --from=builder \
-    /home/rust/src/target/x86_64-unknown-linux-musl/release/muservice \
+    /home/rust/src/target/x86_64-unknown-linux-musl/release/rocketbase \
     /usr/local/bin/
-CMD /usr/local/bin/muservice
+CMD /usr/local/bin/rocketbase

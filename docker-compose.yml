@@ -9,8 +9,8 @@ services:
       - POSTGRES_DB=testdb
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=admin
-  muservice:
-    image: muservice.dev:latest
+  rockerbase:
+    image: rocketbase.dev:latest
     build:
       context: .
       dockerfile: Dockerfile.dev
