@@ -12,16 +12,28 @@ env:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    container: rust:1.64.0
     services:
       postgres:
         image: "postgres:14"
+        ports:
+          - 5432:5432
         env:
           POSTGRES_PASSWORD: password
           POSTGRES_DATABASE: testdb
 
     steps:
     - uses: actions/checkout@v3
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: latest
+    - name: Set up node cache
+      uses: actions/cache@v3
+      continue-on-error: false
+      with:
+        path: |
+          admin-ui/node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('**/admin-ui/package-lock.json') }}
     - name: Set up cargo cache
       uses: actions/cache@v3
       continue-on-error: false
@@ -34,14 +46,16 @@ jobs:
           target/            
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Install Cargo SQLX
-      run: cargo install sqlx-cli
+      run: cargo install sqlx-cli || true
+    - name: Build Admin admin-ui
+      run: npm --prefix=./admin-ui ci && npm --prefix=./admin-ui run build
     - name: Build
       run: cargo build --verbose
     - name: Create DB
       run: sqlx db create
       env:
-        DATABASE_URL: postgres://postgres:password@postgres/postgres?sslmode=disable
+        DATABASE_URL: postgres://postgres:password@localhost/postgres?sslmode=disable
     - name: Run tests
       run: cargo test --verbose
       env:
-        DATABASE_URL: postgres://postgres:password@postgres/postgres?sslmode=disable
+        DATABASE_URL: postgres://postgres:password@localhost/postgres?sslmode=disable
