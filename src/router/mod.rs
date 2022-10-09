@@ -14,6 +14,10 @@ use tracing::instrument;
 
 use crate::{app_state::AppState, model::User};
 
+use self::static_files::static_path;
+
+pub(crate) mod static_files;
+
 async fn home_handler() -> String {
     String::from("Hello server\n")
 }
@@ -49,6 +53,7 @@ pub async fn build_router(app_state: AppState) -> Result<Router<Body>> {
     // let shared_state = app_state::AppState::init().await.context("error initializing state")?;
     let router = Router::new()
     .route("/", get(home_handler))
+    .route("/_/*path", get(static_path))
     .route("/users", get(users_handler))
     .route("/users", post(create_user_handler))
     .layer(
