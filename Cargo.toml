@@ -15,7 +15,7 @@ path = "src/main.rs"
 
 [dependencies]
 tokio = {version="1.20.1", features=["full"]}
-sqlx = {version="0.6.1", features=["runtime-tokio-rustls", "postgres", "migrate", "chrono"]}
+sqlx = {version="0.6.2", features=["runtime-tokio-rustls", "postgres", "migrate", "chrono"]}
 hyper = {version = "0.14.8", features=["client"]}
 color-eyre = "0.6.2"
 tracing-error = "0.2.0"
