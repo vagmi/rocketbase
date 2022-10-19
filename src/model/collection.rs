@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{Executor, Postgres};
-
+use tokio_stream::{StreamExt};
 pub mod column_def;
 pub mod column_type;
 
@@ -76,13 +76,14 @@ impl Collection {
     where
         E: 'a + Executor<'a, Database = Postgres>,
     {
+        let mut column_renames: Vec<ColumnChange> = vec![];
         let mut changes: Vec<ColumnChange> = vec![];
         other.column_defs.iter().for_each(|cd| {
             match self.column_defs.find_def(cd.id) {
                 Some(orig_cd) => {
                     if orig_cd == cd { return; }; 
                     if orig_cd.name != cd.name {
-                        changes.push(ColumnChange::RenameColumn(orig_cd.name.clone(), cd.name.clone()));
+                        column_renames.push(ColumnChange::RenameColumn(orig_cd.name.clone(), cd.name.clone()));
                         return; 
                     }
                     unimplemented!()
@@ -97,12 +98,17 @@ impl Collection {
             .map(|ch| ch.get_alter_statement())
             .collect::<Vec<String>>()
             .join(",");
+
         let mut alter_stmt = String::new();
         alter_stmt
-            .push_str(format!("alter table {} {}", self.name, column_change_statements).as_str());
-        ex.execute(alter_stmt.as_str())
-            .await
-            .map_err(|_| CollectionError::SqlxError)?;
+            .push_str(format!("alter table {} {};", self.name, column_change_statements).as_str());
+        for cr in column_renames {
+            alter_stmt.push_str(format!("alter table {} {}", self.name, cr.get_alter_statement()).as_str());
+        }
+        let mut res_stream = ex.execute_many(alter_stmt.as_str());
+        while let Some(res) = res_stream.next().await {
+            res.map_err(|_| CollectionError::SqlxError)?;
+        }
         Ok(())
     }
 

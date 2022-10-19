@@ -34,6 +34,7 @@ chrono = {version = "0.4.22", features = ["serde"]}
 include_dir = "0.7.3"
 mime_guess = "2.0.4"
 uuid = {version="1.2.1", features=["v4", "fast-rng", "serde"]}
+tokio-stream = "0.1.11"
 
 [profile.dev.package.backtrace]
 opt-level = 3
