@@ -24,6 +24,9 @@ impl<'a> ColumnChange<'a> {
                 cd.is_unique(),
                 cd.is_not_null()
             ),
+            Self::RenameColumn(old_name, new_name) => format!(
+                "rename column {} to {}", old_name, new_name
+            ),
             _ => unimplemented!(),
         }
     }
@@ -78,6 +81,10 @@ impl Collection {
             match self.column_defs.find_def(cd.id) {
                 Some(orig_cd) => {
                     if orig_cd == cd { return; }; 
+                    if orig_cd.name != cd.name {
+                        changes.push(ColumnChange::RenameColumn(orig_cd.name.clone(), cd.name.clone()));
+                        return; 
+                    }
                     unimplemented!()
                 }
                 None => {
@@ -118,132 +125,4 @@ impl Collection {
 }
 
 #[cfg(test)]
-mod tests {
-    use chrono::Utc;
-    use uuid::Uuid;
-
-    #[derive(sqlx::FromRow)]
-    #[allow(dead_code)]
-    struct Organization {
-        id: i64,
-        name: String,
-        created_at: chrono::DateTime<Utc>,
-        updated_at: Option<chrono::DateTime<Utc>>,
-    }
-    #[derive(sqlx::FromRow)]
-    #[allow(dead_code)]
-    struct UpdatedOrganization {
-        id: i64,
-        name: String,
-        website: String,
-        created_at: chrono::DateTime<Utc>,
-        updated_at: Option<chrono::DateTime<Utc>>,
-    }
-    use super::*;
-
-    #[test]
-    fn should_create_create_stmt() {
-        let expected_stmt = r#"create table if not exists users( id bigserial primary key, created_at timestamptz not null default now(), updated_at timestamptz, name text unique not null )"#;
-        let coll = Collection {
-            name: "users".into(),
-            column_defs: vec![ColumnDef {
-                id: Uuid::new_v4(),
-                name: "name".into(),
-                column_type: ColumnType::Text,
-                required: true,
-                unique: true,
-            }],
-        };
-        let ct_stmt = coll.create_table_statement();
-        assert_eq!(expected_stmt, ct_stmt, "create statement match failed");
-    }
-    #[sqlx::test]
-    async fn should_update_collection(pool: sqlx::PgPool) {
-        let mut conn = pool.acquire().await.expect("unable to get a connection");
-        let name_id = Uuid::new_v4();
-        let coll = Collection {
-            name: "organizations".into(),
-            column_defs: vec![ColumnDef {
-                id: name_id,
-                name: "name".into(),
-                column_type: ColumnType::Text,
-                required: true,
-                unique: true,
-            }],
-        };
-        let new_def = Collection {
-            name: "organizations".into(),
-            column_defs: vec![
-                ColumnDef {
-                    id: name_id,
-                    name: "name".into(),
-                    column_type: ColumnType::Text,
-                    required: true,
-                    unique: true,
-                },
-                ColumnDef {
-                    id: Uuid::new_v4(),
-                    name: "website".into(),
-                    column_type: ColumnType::Text,
-                    required: true,
-                    unique: true,
-                },
-            ],
-        };
-        coll.create_collection(&mut conn)
-            .await
-            .expect("unable to create collection");
-        coll.update_collection(&mut conn, &new_def)
-            .await
-            .expect("Could not update collection");
-        let res = conn
-            .execute("insert into organizations(name, website) values('tarkalabs', 'tarkalabs.com')")
-            .await
-            .expect("unable to insert org");
-        assert_eq!(
-            1,
-            res.rows_affected(),
-            "expected one row to be affected. affected {} rows",
-            res.rows_affected()
-        );
-        let orgs = sqlx::query_as::<_, UpdatedOrganization>("select * from organizations")
-            .fetch_all(&mut conn)
-            .await
-            .expect("unable to query orgs");
-
-        assert_eq!(orgs.len(), 1, "expected 1 row found {} rows", orgs.len());
-    }
-    #[sqlx::test]
-    async fn should_create_collection(pool: sqlx::PgPool) {
-        let mut conn = pool.acquire().await.expect("unable to get a connection");
-        let coll = Collection {
-            name: "organizations".into(),
-            column_defs: vec![ColumnDef {
-                id: Uuid::new_v4(),
-                name: "name".into(),
-                column_type: ColumnType::Text,
-                required: true,
-                unique: true,
-            }],
-        };
-        coll.create_collection(&mut conn)
-            .await
-            .expect("unable to create collection");
-        let res = conn
-            .execute("insert into organizations(name) values('tarkalabs')")
-            .await
-            .expect("unable to insert org");
-        assert_eq!(
-            1,
-            res.rows_affected(),
-            "expected one row to be affected. affected {} rows",
-            res.rows_affected()
-        );
-        let orgs = sqlx::query_as::<_, Organization>("select * from organizations")
-            .fetch_all(&mut conn)
-            .await
-            .expect("unable to query orgs");
-
-        assert_eq!(orgs.len(), 1, "expected 1 row found {} rows", orgs.len());
-    }
-}
+mod tests;
