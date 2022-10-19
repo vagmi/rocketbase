@@ -92,6 +92,7 @@ async fn should_rename_column_in_collection(pool: sqlx::PgPool) {
     struct RenameColumnOrg {
         id: i64,
         name_new: String,
+		website: String,
         created_at: chrono::DateTime<Utc>,
         updated_at: Option<chrono::DateTime<Utc>>,
     }
@@ -117,6 +118,13 @@ async fn should_rename_column_in_collection(pool: sqlx::PgPool) {
                 column_type: ColumnType::Text,
                 required: true,
                 unique: true,
+            },
+            ColumnDef {
+                id: Uuid::new_v4(),
+                name: "website".into(),
+                column_type: ColumnType::Text,
+                required: true,
+                unique: true,
             }
         ],
     };
@@ -127,7 +135,7 @@ async fn should_rename_column_in_collection(pool: sqlx::PgPool) {
         .await
         .expect("Could not update collection");
     let res = conn
-        .execute("insert into organizations(name_new) values('tarkalabs')")
+        .execute("insert into organizations(name_new, website) values('tarkalabs', 'tarkalabs.com')")
         .await
         .expect("unable to insert org");
     assert_eq!(
@@ -143,6 +151,7 @@ async fn should_rename_column_in_collection(pool: sqlx::PgPool) {
 
     assert_eq!(orgs.len(), 1, "expected 1 row found {} rows", orgs.len());
 	assert_eq!(orgs[0].name_new, "tarkalabs");
+	assert_eq!(orgs[0].website, "tarkalabs.com");
 }
 #[sqlx::test]
 async fn should_create_collection(pool: sqlx::PgPool) {
