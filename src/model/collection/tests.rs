@@ -104,7 +104,7 @@ async fn should_rename_column_in_collection(pool: sqlx::PgPool) {
         column_defs: vec![ColumnDef {
             id: name_id,
             name: "name".into(),
-            column_type: ColumnType::Text,
+            column_type: ColumnType::Int,
             required: true,
             unique: true,
         }],

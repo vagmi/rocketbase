@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{Executor, Postgres};
-use tokio_stream::{StreamExt};
+use tokio_stream::StreamExt;
 pub mod column_def;
 pub mod column_type;
 
@@ -24,10 +24,14 @@ impl<'a> ColumnChange<'a> {
                 cd.is_unique(),
                 cd.is_not_null()
             ),
-            Self::RenameColumn(old_name, new_name) => format!(
-                "rename column {} to {}", old_name, new_name
+            Self::RenameColumn(old_name, new_name) => {
+                format!("rename column {} to {}", old_name, new_name)
+            }
+            Self::ChangeType(column_name, column_type) => format!(
+                "alter column {} type {}",
+                column_name,
+                column_type.pg_sql_type()
             ),
-            _ => unimplemented!(),
         }
     }
 }
@@ -81,12 +85,21 @@ impl Collection {
         other.column_defs.iter().for_each(|cd| {
             match self.column_defs.find_def(cd.id) {
                 Some(orig_cd) => {
-                    if orig_cd == cd { return; }; 
+                    if orig_cd == cd {
+                        return;
+                    };
                     if orig_cd.name != cd.name {
-                        column_renames.push(ColumnChange::RenameColumn(orig_cd.name.clone(), cd.name.clone()));
-                        return; 
+                        column_renames.push(ColumnChange::RenameColumn(
+                            orig_cd.name.clone(),
+                            cd.name.clone(),
+                        ));
                     }
-                    unimplemented!()
+                    if orig_cd.column_type != cd.column_type {
+                        changes.push(ColumnChange::ChangeType(
+                            orig_cd.name.clone(),
+                            cd.column_type.clone(),
+                        ))
+                    }
                 }
                 None => {
                     changes.push(ColumnChange::AddColumn(cd));
@@ -103,7 +116,9 @@ impl Collection {
         alter_stmt
             .push_str(format!("alter table {} {};", self.name, column_change_statements).as_str());
         for cr in column_renames {
-            alter_stmt.push_str(format!("alter table {} {}", self.name, cr.get_alter_statement()).as_str());
+            alter_stmt.push_str(
+                format!("alter table {} {}", self.name, cr.get_alter_statement()).as_str(),
+            );
         }
         let mut res_stream = ex.execute_many(alter_stmt.as_str());
         while let Some(res) = res_stream.next().await {
