@@ -22,7 +22,7 @@ impl ColumnType {
     pub fn pg_sql_type(&self) -> String {
         match  &self {
             Self::UUID => "uuid".into(),
-            Self::Int => "i64".into(),
+            Self::Int => "bigint".into(),
             Self::Decimal => "decimal".into(),
             Self::Text => "text".into(),
             Self::JSON => "jsonb".into(),
