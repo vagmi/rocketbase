@@ -1,12 +1,11 @@
 use color_eyre::Result;
 use axum::{
     body::Body,
-    Extension,
     http::{Request, StatusCode},
     Json,
     response::{Response, IntoResponse},
     Router, 
-    routing::{get, post}
+    routing::{get, post}, extract::State
 };
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
@@ -23,8 +22,7 @@ async fn home_handler() -> String {
 }
 
 #[instrument]
-async fn users_handler(req: Request<Body>) -> Result<Json<Vec<User>>, StatusCode> {
-    let state = req.extensions().get::<AppState>().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+async fn users_handler(State(state): State<AppState>, req: Request<Body>) -> Result<Json<Vec<User>>, StatusCode> {
     let users = User::all(&state.db().connection())
         .await
         .map_err(|err| {
@@ -35,7 +33,7 @@ async fn users_handler(req: Request<Body>) -> Result<Json<Vec<User>>, StatusCode
 }
 
 #[instrument]
-async fn create_user_handler(Json(mut payload): Json<User>, Extension(state): Extension<AppState>) -> Result<Response, StatusCode> {
+async fn create_user_handler(State(state): State<AppState>, Json(mut payload): Json<User>) -> Result<Response, StatusCode> {
     payload.insert(&state.db().connection())
         .await
         .map_err(|err| {
@@ -49,16 +47,16 @@ async fn create_user_handler(Json(mut payload): Json<User>, Extension(state): Ex
 }
 
 #[instrument]
-pub async fn build_router(app_state: AppState) -> Result<Router<Body>> {
+pub async fn build_router(app_state: AppState) -> Result<Router> {
     // let shared_state = app_state::AppState::init().await.context("error initializing state")?;
     let router = Router::new()
     .route("/", get(home_handler))
     .route("/_/*path", get(static_path))
     .route("/users", get(users_handler))
     .route("/users", post(create_user_handler))
+    .with_state(app_state)
     .layer(
         ServiceBuilder::new()
-            .layer(Extension(app_state))
             .layer(TraceLayer::new_for_http())
     );
     Ok(router)
