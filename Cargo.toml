@@ -30,7 +30,7 @@ tower-http = {version="0.3.4", features=["trace", "cors"]}
 tower = "0.4.13"
 http = "0.2.8"
 thiserror = "1.0.37"
-chrono = {version = "0.4.22", features = ["serde"]}
+chrono = {version = "0.4.23", features = ["serde"]}
 include_dir = "0.7.3"
 mime_guess = "2.0.4"
 uuid = {version="1.2.1", features=["v4", "fast-rng", "serde"]}
