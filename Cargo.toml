@@ -33,7 +33,7 @@ thiserror = "1.0.37"
 chrono = {version = "0.4.23", features = ["serde"]}
 include_dir = "0.7.3"
 mime_guess = "2.0.4"
-uuid = {version="1.2.1", features=["v4", "fast-rng", "serde"]}
+uuid = {version="1.2.2", features=["v4", "fast-rng", "serde"]}
 tokio-stream = "0.1.11"
 
 [profile.dev.package.backtrace]
