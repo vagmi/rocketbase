@@ -1,0 +1,40 @@
+// This grammar defines the structure of our query language.
+// It's used by `pest` to generate a parser at compile time.
+
+// ~~~~~~~~~~~~~~~~~~
+// Base Rules & Whitespace
+// ~~~~~~~~~~~~~~~~~~
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" | "," }
+COMMENT = _{ "#" ~ (!("\r" | "\n") ~ ANY)* }
+
+// An identifier for field names.
+ident = @{ ('a'..'z' | 'A'..'Z') ~ ('a'..'z' | 'A'..'Z' | '0'..'9' | "_")* }
+
+// ~~~~~~~~~~~~~~~~~~
+// Values
+// ~~~~~~~~~~~~~~~~~~
+
+string_value = @{ "\"" ~ ( "\\" ~ ANY | !"\"" ~ ANY )* ~ "\"" }
+int_value = @{ "-"? ~ ASCII_DIGIT+ }
+float_value = @{ "-"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
+boolean_value = @{ "true" | "false" }
+null_value = @{ "null" }
+
+value = { string_value | float_value | int_value | boolean_value | null_value }
+
+// ~~~~~~~~~~~~~~~~~~
+// Query Structure
+// ~~~~~~~~~~~~~~~~~~
+
+argument = { ident ~ ":" ~ value }
+arguments = { "(" ~ (argument ~ (","? ~ argument)*)? ~ ")" }
+
+selection = { ident ~ arguments? ~ selection_set? }
+selection_set = { "{" ~ selection* ~ "}" }
+
+query_body = { "query" ~ selection_set }
+
+// A query file is composed of one or more models.
+// `SOI` and `EOI` stand for Start/End of Input, ensuring the whole file is parsed.
+query = { SOI ~ "{"? ~ query_body ~ "}"? ~ EOI }
