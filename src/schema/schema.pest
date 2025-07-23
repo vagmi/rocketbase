@@ -1,0 +1,78 @@
+// This grammar defines the structure of our `.schema` file.
+// It's used by `pest` to generate a parser at compile time.
+
+// ~~~~~~~~~~~~~~~~~~
+// Base Rules & Whitespace
+// ~~~~~~~~~~~~~~~~~~
+
+// WHITESPACE handles spaces, tabs, and newlines.
+// The `_` in other rules means WHITESPACE can appear there.
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+
+// An identifier for model and field names (e.g., "User", "post_id").
+// It must start with a letter and can be followed by letters or numbers.
+ident = @{ ('a'..'z' | 'A'..'Z') ~ ('a'..'z' | 'A'..'Z' | '0'..'9' | "_")* }
+
+// A list of identifiers, used for relation fields.
+ident_list = { ident ~ ("," ~ ident)* }
+
+// ~~~~~~~~~~~~~~~~~~
+// Type Definitions
+// ~~~~~~~~~~~~~~~~~~
+
+// A base type like "uuid", "string", etc.
+base_type = { "uuid" | "string" | "text" | "timestamp" | "json" | "bigdecimal" }
+
+// A type can be a base type (e.g., `string`) or a model name (e.g., `User`).
+// This allows for defining relations.
+scalar_type = { base_type | ident }
+
+// `?` makes a type optional/nullable.
+optional_modifier = { "?" }
+
+// `[]` makes a type a list/array.
+list_modifier = { "[]" }
+
+// The full type definition for a field.
+type = { scalar_type ~ (optional_modifier | list_modifier)? }
+
+
+// ~~~~~~~~~~~~~~~~~~
+// Field Attributes
+// ~~~~~~~~~~~~~~~~~~
+
+// The `@id` attribute for primary keys.
+id_attribute = { "@id" }
+
+// The `@unique` attribute for unique constraints.
+unique_attribute = { "@unique" }
+
+// The `@relation` attribute for defining foreign key relationships.
+// e.g., @relation(fields: [author_id], references: [id])
+relation_attribute = { "@rel" ~ "(" ~ "fields:" ~ "[" ~ ident_list ~ "]" ~ "," ~ "references:" ~ "[" ~ ident_list ~ "]" ~ ")" }
+
+// A field can have zero or more attributes.
+attribute = _{ id_attribute | unique_attribute | relation_attribute }
+attributes = { attribute* }
+
+
+// ~~~~~~~~~~~~~~~~~~
+// Model and Field Structure
+// ~~~~~~~~~~~~~~~~~~
+
+// A field consists of a name, a type, and optional attributes.
+// e.g., `id uuid @id`
+field = { ident ~ type ~ attributes }
+
+// A model has a name and contains zero or more fields within curly braces.
+// e.g., `model User { ... }`
+model = { "model" ~ ident ~ "{" ~ field* ~ "}" }
+
+
+// ~~~~~~~~~~~~~~~~~~
+// Top-Level Schema
+// ~~~~~~~~~~~~~~~~~~
+
+// A schema file is composed of one or more models.
+// `SOI` and `EOI` stand for Start/End of Input, ensuring the whole file is parsed.
+schema = { SOI ~ model* ~ EOI }

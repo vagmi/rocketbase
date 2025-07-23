@@ -1,0 +1,26 @@
+model User {
+  id        uuid      @id
+  email     string    @unique
+  name      string?
+  posts     Post[]
+  comments  Comment[]
+}
+
+model Post {
+  id        uuid      @id
+  title     string
+  content   text
+  published_at timestamp?
+  author    User @rel(fields: [author_id], references: [id])
+  author_id uuid
+  comments  Comment[]
+}
+
+model Comment {
+  id        uuid      @id
+  content   text
+  author    User      @rel(fields: [author_id], references: [id])
+  author_id uuid
+  post      Post      @rel(fields: [post_id], references: [id])
+  post_id   uuid
+}
